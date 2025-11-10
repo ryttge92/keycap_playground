@@ -43,19 +43,18 @@ This will place all .stl files in the directory
 
 ## How it works
 
-Keycaps are defined in `gem_full.py`, they are then sent to `keycap.py` to convert them to commandline arguments for `keycap_playground.scad`
+Basic rundown for the two main files relevant to the end user. 
 
 ### gem_full.py
 
-Contains the definitions for all the keycaps to be generated, this is where you need to start.  
-Line 626 is where the keycaps starts.
+Contains the definitions for all the keycaps to be generated.  
+Use this file to define and generate a set of keycaps of your own. For a better understanding of how everything works i'd recommend you to start with playing around in keycap_playground.scad 
 
 Heres an example line  
 `gem_double_legends(name="quote", legends=["'", "", '\\u0022']),`
 
 `gem_double_legends`  
 Keycap class, changes within the class will be made to all keycaps within that class.  
-This class starts at line 265
 
 `name="quote"`  
 Name of the keycap
@@ -66,13 +65,10 @@ Defines the keycap legends, some legends like in this case " needs to be written
 https://www.babelstone.co.uk/Unicode/whatisit.html
 Can be used to find what unicode is needed 
 
-### keycap.py 
-
-Responsible for converting the keycaps you defined in `gem_full.py` to commandline arguments for `keycap_playground.scad`
 
 ### keycap_playground.scad
 
-The OpenSCAD file that does all the heavy lifting, can be run by itself to open "the playground"
+The OpenSCAD library that does all the heavy lifting, can be run by itself to open "the playground"
 
 A video by the original creator on how it works can be found here.
 
