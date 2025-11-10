@@ -6,8 +6,10 @@ keycaps using the Keycap Playground.
 
 .. note::
 
-    This was made to be run on a Linux system but if you change the various
-    `Path(<whatever>)` variables it should work on anything.
+This was rewritten to work on a Windows system, the script generates command line argument for 
+keycap_playground.scad and OpenSCAD requires different formatting for command line depending on OS
+https://en.wikibooks.org/wiki/OpenSCAD_User_Manual/Using_OpenSCAD_in_a_command_line_environment
+
 """
 
 import os
@@ -16,6 +18,41 @@ from pathlib import Path
 
 KEY_UNIT = 19.05 # Square that makes up the entire space of a key
 BETWEENSPACE = 0.8 # Space between keycaps
+
+def format_list_for_openscad_fonts(values):
+    return "[" + ", ".join(f'\\\"{v}\\\"' for v in values) + "]"
+
+def format_list_for_openscad_legends(values):
+    """
+    Formats a list for OpenSCAD syntax with proper escaping for Windows CMD.
+    Always prepends a backslash before each legend value.
+    Handles special cases for quotes, ampersand, lt and gt signs.
+    Would love to get backslashes working but CMD interprets doubble backslashes as a UNC path. 
+    """
+    
+    # If legends are empty or all blank, return empty string
+    if not values or all(v.strip() == "" for v in values):
+        return
+    
+    out = "["
+    for i, v in enumerate(values):
+        # Handle single quote
+        if v == "'":
+            out += "\\\"'\\\""
+        else:
+            # Escape backslashes inside the value
+            escaped = v.replace("\\", "\\\\")
+            # Escape CMD control characters
+            for ch in ["&", "<", ">"]:
+                escaped = escaped.replace(ch, f"^{ch}")
+            # Wrap in escaped quotes for CMD
+            out += f'\\\"{escaped}\\\"'
+        if i < len(values) - 1:
+            out += ", "
+    out += "]"
+    return out
+
+
 
 class OpenSCADException(Exception):
     """
@@ -209,33 +246,6 @@ class Keycap(object):
         self.keycap_playground_path = keycap_playground_path
         self.colorscad_path = colorscad_path
         self.openscad_path = openscad_path
-        # This speeds things up considerably:
-        self.openscad_args = "--enable=fast-csg"
-
-    # NOTE: This doesn't seem to work right for unknown reasons so you'll want
-    #       to generate the quote keycap by hand on the command line.
-    def quote(self, legends):
-        """
-        Checks for the edge case of a single quote (') legend and converts it
-        into `"'"'"'"` so that bash will pass it correclty to OpenSCAD via
-        `getstatusoutput()`.  Also covers the slash (\\) legend for
-        completeness.
-
-        .. note::
-
-            Example of what it should look like: `LEGENDS=["'"'"'", "", "\""];`
-        """
-        properly_escaped_quote = r'''"'"'"'"'''
-        out = "["
-        for i, legend in enumerate(legends):
-            if legend == "'":
-                out += properly_escaped_quote + ","
-            elif legend == '"':
-                out += r'"\""'
-            else:
-                out += json.dumps(legend) + ","
-        out = out.rstrip(',') # Get rid of trailing comma
-        return out + "]"
 
     def __repr__(self):
         return f"""
@@ -254,10 +264,15 @@ class Keycap(object):
         """
         Returns the OpenSCAD command line to use to generate this keycap.
         """
+
         first_part = (
-            f"{self.openscad_path} {self.openscad_args} -o "
-            f"'{self.output_path}'/'{self.name}.{self.file_type}' -D $'"
+            f"{self.openscad_path} -o "
+            f"\"{os.path.join(self.output_path, f'{self.name}.{self.file_type}')}\" -D \""
         )
+        """
+        Keeping this in if i ever get around to fixing Colorscad, it's a Linux native application
+        that might run in CYGWIN
+
         last_part = self.keycap_playground_path
         render = self.render
         if str(self.colorscad_path): # Use colorscad.sh
@@ -269,47 +284,49 @@ class Keycap(object):
                     #f'PATH="${self.openscad_path.parent}:$PATH"; '
                     f"{self.colorscad_path} -i {self.keycap_playground_path} "
                     f"-o '{self.output_path}'/'{self.name}.{self.file_type}' "
-                    f"-p '{self.openscad_path}' "
-                    f"-- {self.openscad_args} -D $'"
+                    f"-p '{self.openscad_path}' -D $ "
+                    #f"-D $'"
                 )
                 last_part = ""
                 #render = ["keycap", "stem", "legends"]
                 render.append("legends")
         # NOTE: Since OpenSCAD requires double quotes I'm using the json module
         #       to encode things that need it:
+
+        """
         return (
             f"{first_part}"
-            f"RENDER={json.dumps(render)}; "
-            f"KEY_PROFILE={json.dumps(self.key_profile)}; "
-            f"KEY_LENGTH={round(self.key_length,2)}; "
-            f"KEY_WIDTH={round(self.key_width,2)}; "
+            f"RENDER={format_list_for_openscad_legends(self.render)}; "
+            f"KEY_PROFILE=\\\"{self.key_profile}\\\"; "
+            f"KEY_LENGTH={round(self.key_length, 2)}; "
+            f"KEY_WIDTH={round(self.key_width, 2)}; "
             f"KEY_TOP_DIFFERENCE={self.key_top_difference}; "
             f"KEY_ROTATION={self.key_rotation}; "
             f"KEY_HEIGHT={self.key_height}; "
             f"KEY_TOP_X={self.key_top_x}; "
             f"KEY_TOP_Y={self.key_top_y}; "
             f"WALL_THICKNESS={self.wall_thickness}; "
-            f"UNIFORM_WALL_THICKNESS={json.dumps(self.uniform_wall_thickness)}; "
+            f"UNIFORM_WALL_THICKNESS={str(self.uniform_wall_thickness).lower()}; "
             f"DISH_THICKNESS={self.dish_thickness}; "
-            f"DISH_INVERT={json.dumps(self.dish_invert)}; "
+            f"DISH_INVERT={str(self.dish_invert).lower()}; "
             f"DISH_INVERT_DIVISION_X={self.dish_invert_division_x}; "
             f"DISH_INVERT_DIVISION_Y={self.dish_invert_division_y}; "
-            f"DISH_TYPE={json.dumps(self.dish_type)}; "
+            f"DISH_TYPE=\\\"{self.dish_type}\\\"; "
             f"DISH_DEPTH={self.dish_depth}; "
             f"DISH_X={self.dish_x}; "
             f"DISH_Y={self.dish_y}; "
             f"DISH_Z={self.dish_z}; "
             f"DISH_TILT={self.dish_tilt}; "
-            f"DISH_TILT_CURVE={json.dumps(self.dish_tilt_curve)}; "
+            f"DISH_TILT_CURVE={str(self.dish_tilt_curve).lower()}; "
             f"DISH_FN={self.dish_fn}; "
             f"DISH_CORNER_FN={self.dish_corner_fn}; "
             f"POLYGON_LAYERS={self.polygon_layers}; "
-            f"POLYGON_LAYER_ROTATION={json.dumps(self.polygon_layer_rotation)}; "
+            f"POLYGON_LAYER_ROTATION={self.polygon_layer_rotation}; "
             f"POLYGON_EDGES={self.polygon_edges}; "
-            f"POLYGON_ROTATION={json.dumps(self.polygon_rotation)}; "
+            f"POLYGON_ROTATION={str(self.polygon_rotation).lower()}; "
             f"CORNER_RADIUS={self.corner_radius}; "
-            f"CORNER_RADIUS_CURVE={json.dumps(self.corner_radius_curve)}; "
-            f"STEM_TYPE={json.dumps(self.stem_type)}; "
+            f"CORNER_RADIUS_CURVE={self.corner_radius_curve}; "
+            f"STEM_TYPE=\\\"{self.stem_type}\\\"; "
             f"STEM_HEIGHT={self.stem_height}; "
             f"STEM_TOP_THICKNESS={self.stem_top_thickness}; "
             f"STEM_INSET={self.stem_inset}; "
@@ -319,7 +336,7 @@ class Keycap(object):
             f"STEM_SIDE_SUPPORTS={self.stem_side_supports}; "
             f"STEM_SIDES_WALL_THICKNESS={self.stem_sides_wall_thickness}; "
             f"STEM_LOCATIONS={self.stem_locations}; "
-            f"STEM_SNAP_FIT={json.dumps(self.stem_snap_fit)}; "
+            f"STEM_SNAP_FIT={str(self.stem_snap_fit).lower()}; "
             f"STEM_WALLS_INSET={self.stem_walls_inset}; "
             f"STEM_WALLS_TOLERANCE={self.stem_walls_tolerance}; "
             f"HOMING_DOT_LENGTH={self.homing_dot_length}; "
@@ -327,18 +344,18 @@ class Keycap(object):
             f"HOMING_DOT_X={self.homing_dot_x}; "
             f"HOMING_DOT_Y={self.homing_dot_y}; "
             f"HOMING_DOT_Z={self.homing_dot_z}; "
-            f"LEGENDS={self.quote(self.legends)}; "
-            f"LEGEND_FONTS={json.dumps(self.fonts)}; "
+            f"LEGENDS={format_list_for_openscad_legends(self.legends)}; "
+            f"LEGEND_FONTS={format_list_for_openscad_fonts(self.fonts)}; "
             f"LEGEND_FONT_SIZES={self.font_sizes}; "
             f"LEGEND_TRANS={self.trans}; "
             f"LEGEND_TRANS2={self.trans2}; "
             f"LEGEND_ROTATION={self.rotation}; "
             f"LEGEND_ROTATION2={self.rotation2}; "
             f"LEGEND_SCALE={self.scale}; "
-            f"LEGEND_UNDERSET={self.underset}; "
-# NOTE: For some reason I have to duplicate RENDER here for it to work properly:
-            f"RENDER={json.dumps(render)};' "
-            f"{last_part}"
+            f"LEGEND_UNDERSET={self.underset}; \" "
+            f"{os.path.join(os.path.dirname(__file__), '..', 'keycap_playground.scad')}"
+            #f"{last_part}" #Kept in if i get around to fixing Colorscad
+
         )
 
     def postinit(self, **kwargs):

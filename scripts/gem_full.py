@@ -44,8 +44,9 @@ color_init()
 from keycap import Keycap
 
 # Change these to the correct paths in your environment:
-OPENSCAD_PATH = Path("/home/riskable/downloads/OpenSCAD-2022.12.06.ai12948-x86_64.AppImage")
-COLORSCAD_PATH = Path("/home/riskable/downloads/colorscad/colorscad.sh")
+OPENSCAD_PATH = Path('"C:/Program Files/OpenSCAD (Nightly)/openscad.exe"')
+# Colorscad currently not working, Linux native application, might run in cygwin.
+#COLORSCAD_PATH = Path("/home/riskable/downloads/colorscad/colorscad.sh")
 
 KEY_UNIT = 19.05 # Square that makes up the entire space of a key
 BETWEENSPACE = 0.8 # Space between keycaps
@@ -57,10 +58,11 @@ class gem_base(Keycap):
     """
     def __init__(self, **kwargs):
         self.openscad_path = OPENSCAD_PATH
-        self.colorscad_path = COLORSCAD_PATH
+        # Colorscad currently not working, Linux native application
+        #self.colorscad_path = COLORSCAD_PATH
         super().__init__(**kwargs,
-            openscad_path=self.openscad_path,
-            colorscad_path=self.colorscad_path)
+            openscad_path=self.openscad_path)
+            #colorscad_path=self.colorscad_path)
         self.render = ["keycap", "stem"]
         self.file_type = FILE_TYPE
         self.key_profile = "gem"
@@ -631,7 +633,7 @@ KEYCAPS = [
     gem_numrow(legends=["4", "", "$"]),
     gem_5(legends=["5", "", "%"]),
     gem_6(legends=["6", "", "^"]),
-    gem_7(legends=["7", "", "&"]),
+    gem_7(legends=["7", "", "&"]), 
     gem_8(legends=["8", "", "*"]),
     gem_numrow(legends=["9", "", "("]),
     gem_numrow(legends=["0", "", ")"]),
@@ -774,8 +776,8 @@ KEYCAPS = [
     gem_brackets(name="rbracket", legends=["]", "", "}"]),
     gem_semicolon(name="semicolon", legends=[";", "", ":"]),
     gem_double_legends(name="quote", legends=["'", "", '\\u0022']),
-    gem_gt_lt(name="comma", legends=[",", "", "<"]),
-    gem_gt_lt(name="dot", legends=[".", "", ">"]),
+    gem_gt_lt(name="comma", legends=[",", "", "<"]), 
+    gem_gt_lt(name="dot", legends=[".", "", ">"]),  
     gem_double_legends(name="slash", legends=["/", "", "?"]),
     # 60% and smaller numrow (with function key legends on the front)
     gem_numrow(name="1_F1", legends=["1", "", "!", "F1"]),
@@ -784,7 +786,7 @@ KEYCAPS = [
     gem_numrow(name="4_F4", legends=["4", "", "$", "F4"]),
     gem_5(name="5_F5", legends=["5", "", "%", "F5"]),
     gem_numrow(name="6_F6", legends=["6", "", "^", "F6"]),
-    gem_7(name="7_F7", legends=["7", "", "&", "F7"]),
+    gem_7(name="7_F7", legends=["7", "", "&", "F7"]), 
     gem_8(name="8_F8", legends=["8", "", "*", "F8"]),
     gem_numrow(name="9_F9", legends=["9", "", "(", "F9"]),
     gem_numrow(name="0_F10", legends=["0", "", ")", "F10"]),
@@ -811,8 +813,8 @@ KEYCAPS = [
         scale=[[1,1,3], [1,1,3]]),
     # 1.5U keys
     gem_1_5U(name="blank"),
-    gem_bslash_1U(name="bslash", legends=["\\u005c", "", "|"]),
-    gem_bslash(name="bslash", legends=["\\u005c", "", "|"]),
+    #gem_bslash_1U(name="bslash", legends=["\\u005c", "", "|"]), #Backslash currently not working in windows CMD interprets \\ as a UNC path
+    #gem_bslash(name="bslash", legends=["\\u005c", "", "|"]), #Backslash currently not working in windows CMD interprets \\ as a UNC path
     gem_tab(name="Tab", legends=["Tab"]),
     gem_1_5U(name="LAlt", legends=["Alt"], trans=[[3.5,0.3,0]], font_sizes=[4.5]),
     gem_1_5U(name="RAlt", legends=["Alt Gr"], trans=[[3,0.3,0]], font_sizes=[4.5]),
